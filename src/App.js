@@ -9,8 +9,12 @@ const stylesheet = [
     style: {
       'label': 'data(label)',
       'target-arrow-shape': 'triangle',
-      'target-arrow-color': '#ccc',
-      'line-color': '#ccc',
+      'target-arrow-color': '#aaa',
+      'line-color': '#aaa',
+      'text-background-opacity': 1,
+      'text-background-color': '#fff',
+      'text-background-shape': 'roundrectangle',
+      'text-background-padding': '3px',
       'target-endpoint': 'outside-to-line',
       'curve-style': 'bezier'
     }
@@ -20,27 +24,30 @@ const stylesheet = [
     style: {
       'label': 'data(label)',
       'text-valign': 'center',
-      'text-halign': 'center'
+      'text-halign': 'center',
+      'background-color': '#fff',
+      'border-width': 1,
+      'border-color': '#000'
     }
   },
   {
     selector: '.labeled',
     style: {
-      'border-width': 3,
-      'border-color': 'green'
+      'background-color': '#29b6f6'
     }
   },
   {
     selector: '.scanned',
     style: {
-      'background-color': 'blue'
+      'border-width': 3,
+      'border-color': '#33691e'
     }
   },
   {
     selector: '.marked-edge',
     style: {
-      'line-color': 'black',
-      'target-arrow-color': 'black',
+      'line-color': '#689f38',
+      'target-arrow-color': '#689f38',
     }
   }
 ];
@@ -66,7 +73,7 @@ class App extends Component {
         ]
       },
       intermediateStep: false, // flag add an intermediate step to mark augmenting path
-      nodesLabeled: [0],
+      nodesLabeled: [],
       nodesScanned: [],
       nodesPre: {},
       nodePositions: {
@@ -118,21 +125,24 @@ class App extends Component {
         classes: `${this.state.nodesLabeled.includes(i) ? 'labeled ' : ''}${this.state.nodesScanned.includes(i) ? 'scanned ' : ''}`
       })),
       // edges
-      ...this.state.network.edges.map(([nodeFrom, nodeTo, flow, capacity]) => ({
-        data: {
-          source: nodeFrom,
-          target: nodeTo,
-          label: `${capacity - flow}`
-        },
-        classes: this.state.nodesPre[nodeTo] === nodeFrom ? 'marked-edge' : ''
-      })),
-      ...this.state.network.edges.map(([nodeFrom, nodeTo, flow, capacity]) => ({
-        data: {
-          source: nodeTo,
-          target: nodeFrom,
-          label: `${flow}`
-        }
-      }))
+      ...this.state.network.edges
+        .filter(([nodeFrom, nodeTo, flow, capacity]) => (capacity - flow) > 0)
+        .map(([nodeFrom, nodeTo, flow, capacity]) => ({
+          data: {
+            source: nodeFrom,
+            target: nodeTo,
+            label: `${capacity - flow}`
+          }
+        })),
+      ...this.state.network.edges
+        .filter(([nodeFrom, nodeTo, flow, capacity]) => flow > 0)
+        .map(([nodeFrom, nodeTo, flow, capacity]) => ({
+          data: {
+            source: nodeTo,
+            target: nodeFrom,
+            label: `${flow}`
+          }
+        }))
     ];
   }
 
@@ -142,6 +152,12 @@ class App extends Component {
 
   handleNextStep() {
     if (this.state.terminated) return;
+
+    // label source
+    if (this.state.nodesLabeled.length === 0 && this.state.nodesScanned.length === 0) {
+      this.setState({ nodesLabeled: [0] });
+      return
+    }
 
     const t = this.state.network.numberOfNodes - 1;
 
@@ -194,7 +210,7 @@ class App extends Component {
           nodesScanned: [],
           intermediateStep: true
         };
-        console.log('PATH', augmentingPath)
+
         for (let i = 0; i < augmentingPath.length; i++) {
           for (let [nodeFrom, nodeTo, flow, capacity] of this.state.network.edges) {
             if (nodeFrom === augmentingPath[i] && nodeTo === augmentingPath[i+1]) {
@@ -203,8 +219,6 @@ class App extends Component {
             }
           }
         }
-
-        console.log('HIER', tempState);
 
         return tempState;
       });
@@ -259,7 +273,7 @@ class App extends Component {
   render () {
     const layout = { name: 'preset' };
     return (
-      <div>
+      <div className='graphApp'>
         <Button onClick={() => this.handlePrevStep()}>Prev Step</Button>
         <Button onClick={() => this.handleNextStep()}>Next Step</Button>
         <span>Step: <b>{this.state.stepCounter}</b> {this.state.terminated ? '(TERMINATED)' : ''}</span>
