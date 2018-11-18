@@ -280,7 +280,7 @@ class App extends Component {
   }
 
   nodeToString (node) {
-    if (node === null) return '';
+    if (!(typeof node === 'string' || typeof node === 'number')) return '';
     return node.toString().replace('0', 's').replace((this.state.network.numberOfNodes - 1).toString(), 't');
   }
 
