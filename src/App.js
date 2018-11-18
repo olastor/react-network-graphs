@@ -37,6 +37,12 @@ const stylesheet = [
     }
   },
   {
+    selector: '.currentNode',
+    style: {
+      'background-color': '#283593'
+    }
+  },
+  {
     selector: '.scanned',
     style: {
       'border-width': 3,
@@ -72,6 +78,7 @@ class App extends Component {
           [4, 5, 0, 3]
         ]
       },
+      currentNode: null,
       intermediateStep: false, // flag add an intermediate step to mark augmenting path
       nodesLabeled: [],
       nodesScanned: [],
@@ -99,7 +106,7 @@ class App extends Component {
       ...new Array(this.state.network.numberOfNodes).fill(undefined).map((_, i) => ({
         data: { id: i, label: i === 0 ? 's' : (i === this.state.network.numberOfNodes - 1 ? 't' : i) },
         position: this.state.nodePositions[i],
-        classes: `${this.state.nodesLabeled.includes(i) ? 'labeled ' : ''}${this.state.nodesScanned.includes(i) ? 'scanned ' : ''}`
+        classes: `${this.state.currentNode === i ? 'currentNode' : (this.state.nodesLabeled.includes(i) ? 'labeled ' : '')}${this.state.nodesScanned.includes(i) ? 'scanned ' : ''}`
       })),
       // edges
       ...this.state.network.edges.map(([nodeFrom, nodeTo, flow, capacity]) => ({
@@ -122,7 +129,7 @@ class App extends Component {
       ...new Array(this.state.network.numberOfNodes).fill(undefined).map((_, i) => ({
         data: { id: i, label: i === 0 ? 's' : (i === this.state.network.numberOfNodes - 1 ? 't' : i) },
         position: this.state.nodePositions[i],
-        classes: `${this.state.nodesLabeled.includes(i) ? 'labeled ' : ''}${this.state.nodesScanned.includes(i) ? 'scanned ' : ''}`
+        classes: `${this.state.currentNode === i ? 'currentNode' : (this.state.nodesLabeled.includes(i) ? 'labeled ' : '')}${this.state.nodesScanned.includes(i) ? 'scanned ' : ''}`
       })),
       // edges
       ...this.state.network.edges
@@ -233,7 +240,12 @@ class App extends Component {
         return;
       }
 
-      const i = this.state.nodesLabeled.filter(x => !this.state.nodesScanned.includes(x))[0];
+      if (this.state.currentNode === null) {
+        this.state.currentNode = this.state.nodesLabeled.filter(x => !this.state.nodesScanned.includes(x))[0];
+        return;
+      }
+
+      const i = this.state.currentNode;
 
       if (i === undefined) {
         this.setState({ terminated: true });
@@ -259,15 +271,21 @@ class App extends Component {
       });
 
       this.setState((state) => ({
-        nodesScanned: [...state.nodesScanned, i]
-      }), state => console.log(this.state));
+        nodesScanned: [...state.nodesScanned, i],
+        currentNode: null
+      }));
     }
 
     this.setState(state => ({ stepCounter: state.stepCounter + 1 }));
   }
 
+  nodeToString (node) {
+    if (node === null) return '';
+    return node.toString().replace('0', 's').replace((this.state.network.numberOfNodes - 1).toString(), 't');
+  }
+
   convertSetOfNodesToLabels (nodes) {
-    return nodes.map(x => x.toString().replace('0', 's').replace((this.state.network.numberOfNodes - 1).toString(), 't'));
+    return nodes.map(x => this.nodeToString(x));
   }
 
   render () {
@@ -279,6 +297,7 @@ class App extends Component {
         <span>Step: <b>{this.state.stepCounter}</b> {this.state.terminated ? '(TERMINATED)' : ''}</span>
         <span>LABELED: {JSON.stringify(this.convertSetOfNodesToLabels(this.state.nodesLabeled))}</span>
         <span>SCANNED: {JSON.stringify(this.convertSetOfNodesToLabels(this.state.nodesScanned))}</span>
+        <span>CURRENT NODE: {this.nodeToString(this.state.currentNode)}</span>
         <div style={{ display: 'flex', width: '100%', height: 'calc(100% - 100px)'}}>
           <CytoscapeComponent
             elements={this.toCytoscapeNetwork()}
